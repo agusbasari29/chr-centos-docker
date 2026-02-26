@@ -3,37 +3,30 @@ FROM centos:7.9.2009
 LABEL maintainer="chr-centos-docker"
 LABEL description="CentOS 7 backend container - accessible only via CHR VPN gateway"
 
-# Fix CentOS 7 EOL mirrors (mirrorlist.centos.org sudah mati, pakai vault)
-# Disable fastestmirror & ovl plugin agar tidak resolve mirror yang tidak valid
-RUN sed -i 's/^enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf && \
-    sed -i \
-    -e 's|^mirrorlist=|#mirrorlist=|g' \
-    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
-    /etc/yum.repos.d/CentOS-Base.repo && \
-    sed -i \
-    -e 's|^mirrorlist=|#mirrorlist=|g' \
-    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
-    /etc/yum.repos.d/CentOS-SCLo-scl.repo \
-    /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo 2>/dev/null || true
+# Fix CentOS 7 EOL: disable yum plugins, patch semua repo ke vault/arsip
+RUN sed -i 's/^enabled=1/enabled=0/' \
+        /etc/yum/pluginconf.d/fastestmirror.conf \
+        /etc/yum/pluginconf.d/ovl.conf 2>/dev/null || true && \
+    find /etc/yum.repos.d/ -name "*.repo" -exec sed -i \
+        -e 's|^metalink=|#metalink=|g' \
+        -e 's|^mirrorlist=|#mirrorlist=|g' \
+        -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+        -e 's|^baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+        {} \; && \
+    yum clean all && rm -rf /var/cache/yum
 
 # Install EPEL
 RUN yum -y install epel-release
 
-# Fix EPEL repo - ganti metalink/mirrorlist ke arsip, bersihkan cache lama
-RUN sed -i \
+# Fix EPEL repo ke arsip, bersihkan cache
+RUN find /etc/yum.repos.d/ -name "epel*.repo" -exec sed -i \
         -e 's|^metalink=|#metalink=|g' \
         -e 's|^mirrorlist=|#mirrorlist=|g' \
         -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
         -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        /etc/yum.repos.d/epel.repo && \
-    sed -i \
-        -e 's|^metalink=|#metalink=|g' \
-        -e 's|^mirrorlist=|#mirrorlist=|g' \
-        -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        /etc/yum.repos.d/epel-testing.repo 2>/dev/null || true && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+        -e 's|^baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        {} \; && \
+    yum clean all && rm -rf /var/cache/yum
 
 # Update & install packages
 RUN yum -y update && \
