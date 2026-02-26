@@ -35,8 +35,8 @@ services:
       - "${L2TP_PORT:-1701}:1701/udp"
       # PPTP
       - "${PPTP_PORT:-1723}:1723/tcp"
-      # SSTP
-      - "${SSTP_PORT:-443}:443/tcp"
+      # SSTP - uncomment jika diperlukan (pastikan port 443 tidak dipakai lain)
+      # - "${SSTP_PORT:-443}:443/tcp"
       # API
       - "8728:8728"
       # API-SSL
