@@ -1,0 +1,56 @@
+FROM centos:7.9.2009
+
+LABEL maintainer="chr-centos-docker"
+LABEL description="CentOS 7 backend container - accessible only via CHR VPN gateway"
+
+# Fix CentOS 7 EOL mirrors (mirrorlist.centos.org sudah mati, pakai vault)
+RUN sed -i \
+    -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+    /etc/yum.repos.d/CentOS-Base.repo \
+    /etc/yum.repos.d/CentOS-SCLo-scl.repo \
+    /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo 2>/dev/null || \
+    sed -i \
+    -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+    /etc/yum.repos.d/CentOS-Base.repo
+
+# Update & install essential tools
+RUN yum -y update && \
+    yum -y install epel-release && \
+    sed -i \
+        -e 's|^mirrorlist=|#mirrorlist=|g' \
+        -e 's|^#baseurl=https\?://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        /etc/yum.repos.d/epel*.repo && \
+    yum -y install \
+        # Networking tools
+        iproute \
+        net-tools \
+        iputils \
+        bind-utils \
+        traceroute \
+        tcpdump \
+        nmap-ncat \
+        wget \
+        curl \
+        # System tools
+        sudo \
+        vim \
+        nano \
+        bash-completion \
+        which \
+        lsof \
+        htop \
+        # For future services
+        supervisor && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
+# Create app directory
+RUN mkdir -p /data /app /etc/supervisor.d
+
+# Copy supervisor config (untuk manage multiple services)
+COPY supervisord.conf /etc/supervisord.conf
+
+# Default: container tetap hidup, siap untuk install service
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

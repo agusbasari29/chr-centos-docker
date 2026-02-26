@@ -1,0 +1,114 @@
+version: "3.8"
+
+# =============================================================
+# CHR + CentOS Docker Stack
+# CHR = MikroTik RouterOS as VPN Gateway
+# CentOS = Backend services (hanya bisa diakses via VPN)
+# =============================================================
+
+services:
+
+  # -----------------------------------------------------------
+  # MikroTik CHR - VPN Gateway
+  # -----------------------------------------------------------
+  chr:
+    image: ${CHR_IMAGE:-evilfreelancer/docker-routeros}:${CHR_VERSION:-latest}
+    container_name: mikrotik-chr
+    restart: unless-stopped
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      mgmt:
+        ipv4_address: ${CHR_MGMT_IP:-172.20.0.2}
+      internal:
+        ipv4_address: ${CHR_INTERNAL_IP:-192.168.100.1}
+    ports:
+      # Winbox
+      - "8291:8291"
+      # WireGuard
+      - "${WG_PORT:-51820}:51820/udp"
+      # L2TP
+      - "${L2TP_PORT:-1701}:1701/udp"
+      # PPTP
+      - "${PPTP_PORT:-1723}:1723/tcp"
+      # SSTP
+      - "${SSTP_PORT:-443}:443/tcp"
+      # API
+      - "8728:8728"
+      # API-SSL
+      - "8729:8729"
+    volumes:
+      - chr-data:/routeros
+      - ./routeros/initial-config.rsc:/routeros/initial-config.rsc:ro
+    environment:
+      - ROUTEROS_PASSWORD=${CHR_ADMIN_PASSWORD:-changeme123}
+    healthcheck:
+      test: ["CMD", "ping", "-c1", "-W1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # -----------------------------------------------------------
+  # CentOS - Backend Services
+  # Hanya terhubung ke internal network (akses via VPN)
+  # -----------------------------------------------------------
+  centos:
+    build:
+      context: .
+      dockerfile: Dockerfile.centos
+    container_name: centos-backend
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    networks:
+      internal:
+        ipv4_address: ${CENTOS_INTERNAL_IP:-192.168.100.10}
+    dns:
+      - ${CHR_INTERNAL_IP:-192.168.100.1}
+    # Default gateway melalui CHR
+    # (semua traffic keluar harus lewat VPN gateway)
+    command: >
+      /bin/bash -c "
+        ip route del default 2>/dev/null || true;
+        ip route add default via ${CHR_INTERNAL_IP:-192.168.100.1};
+        tail -f /dev/null
+      "
+    volumes:
+      - centos-data:/data
+    depends_on:
+      - chr
+
+# -----------------------------------------------------------
+# Networks
+# -----------------------------------------------------------
+networks:
+  # Management network - untuk akses Winbox/API ke CHR
+  mgmt:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${MGMT_SUBNET:-172.20.0.0/24}
+          gateway: ${MGMT_GATEWAY:-172.20.0.1}
+
+  # Internal network - CHR <-> CentOS (terisolasi)
+  internal:
+    driver: bridge
+    internal: true   # Tidak ada akses internet langsung
+    ipam:
+      config:
+        - subnet: ${INTERNAL_SUBNET:-192.168.100.0/24}
+          gateway: ${INTERNAL_GATEWAY:-192.168.100.1}
+
+# -----------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------
+volumes:
+  chr-data:
+    driver: local
+  centos-data:
+    driver: local

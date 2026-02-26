@@ -1,0 +1,14 @@
+# Environment variables (jangan di-commit!)
+.env
+
+# Docker volumes
+volumes/
+
+# Backup files
+backups/
+*.backup
+*.rsc.bak
+
+# OS
+.DS_Store
+Thumbs.db
