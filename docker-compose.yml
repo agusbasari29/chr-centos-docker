@@ -13,6 +13,20 @@ version: "3.8"
 services:
 
   # -----------------------------------------------------------
+  # Portainer - Docker Management UI
+  # -----------------------------------------------------------
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+
+  # -----------------------------------------------------------
   # MikroTik CHR - VPN Gateway
   # -----------------------------------------------------------
   chr:
@@ -100,4 +114,6 @@ volumes:
   chr-data:
     driver: local
   centos-data:
+    driver: local
+  portainer-data:
     driver: local
