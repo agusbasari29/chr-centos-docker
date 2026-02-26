@@ -28,11 +28,12 @@ RUN find /etc/yum.repos.d/ -name "epel*.repo" -exec sed -i \
         {} \; && \
     yum clean all && rm -rf /var/cache/yum
 
-# Rebuild rpmdb dulu untuk fix "Rpmdb checksum is invalid" di overlay fs
-RUN rpm --rebuilddb
-
-# Install packages (skip yum update untuk hindari rpmdb corruption di Docker overlay)
-RUN yum -y install \
+# Install packages
+# --setopt=tsflags=nodocs mengurangi I/O overlay yang menyebabkan rpmdb corruption
+RUN rpm --rebuilddb && \
+    yum -y install \
+        --setopt=tsflags=nodocs \
+        --setopt=override_install_langs=en_US.utf8 \
         iproute \
         net-tools \
         iputils \
@@ -50,6 +51,7 @@ RUN yum -y install \
         lsof \
         htop \
         supervisor && \
+    rpm --rebuilddb && \
     yum clean all && \
     rm -rf /var/cache/yum
 
