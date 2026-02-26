@@ -4,16 +4,17 @@ LABEL maintainer="chr-centos-docker"
 LABEL description="CentOS 7 backend container - accessible only via CHR VPN gateway"
 
 # Fix CentOS 7 EOL mirrors (mirrorlist.centos.org sudah mati, pakai vault)
-RUN sed -i \
-    -e 's|^mirrorlist=|#mirrorlist=|g' \
-    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
-    /etc/yum.repos.d/CentOS-Base.repo \
-    /etc/yum.repos.d/CentOS-SCLo-scl.repo \
-    /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo 2>/dev/null || \
+# Disable fastestmirror & ovl plugin agar tidak resolve mirror yang tidak valid
+RUN sed -i 's/^enabled=1/enabled=0/' /etc/yum/pluginconf.d/fastestmirror.conf && \
     sed -i \
     -e 's|^mirrorlist=|#mirrorlist=|g' \
     -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
-    /etc/yum.repos.d/CentOS-Base.repo
+    /etc/yum.repos.d/CentOS-Base.repo && \
+    sed -i \
+    -e 's|^mirrorlist=|#mirrorlist=|g' \
+    -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+    /etc/yum.repos.d/CentOS-SCLo-scl.repo \
+    /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo 2>/dev/null || true
 
 # Install EPEL
 RUN yum -y install epel-release
