@@ -4,6 +4,10 @@ version: "3.8"
 # CHR + CentOS Docker Stack
 # CHR = MikroTik RouterOS as VPN Gateway
 # CentOS = Backend services (hanya bisa diakses via VPN)
+#
+# Arsitektur: satu network Docker (chr-net)
+# CHR: 192.168.100.1  <- VPN gateway + Winbox/API
+# CentOS: 192.168.100.10 <- backend, traffic keluar via CHR
 # =============================================================
 
 services:
@@ -22,10 +26,8 @@ services:
     devices:
       - /dev/net/tun
     networks:
-      mgmt:
-        ipv4_address: ${CHR_MGMT_IP:-172.20.0.2}
-      internal:
-        ipv4_address: ${CHR_INTERNAL_IP:-192.168.100.1}
+      chr-net:
+        ipv4_address: ${CHR_IP:-192.168.100.1}
     ports:
       # Winbox
       - "8291:8291"
@@ -35,7 +37,7 @@ services:
       - "${L2TP_PORT:-1701}:1701/udp"
       # PPTP
       - "${PPTP_PORT:-1723}:1723/tcp"
-      # SSTP - uncomment jika diperlukan (pastikan port 443 tidak dipakai lain)
+      # SSTP - uncomment jika diperlukan
       # - "${SSTP_PORT:-443}:443/tcp"
       # API
       - "8728:8728"
@@ -55,7 +57,6 @@ services:
 
   # -----------------------------------------------------------
   # CentOS - Backend Services
-  # Hanya terhubung ke internal network (akses via VPN)
   # -----------------------------------------------------------
   centos:
     build:
@@ -66,16 +67,14 @@ services:
     cap_add:
       - NET_ADMIN
     networks:
-      internal:
-        ipv4_address: ${CENTOS_INTERNAL_IP:-192.168.100.10}
+      chr-net:
+        ipv4_address: ${CENTOS_IP:-192.168.100.10}
     dns:
-      - ${CHR_INTERNAL_IP:-192.168.100.1}
-    # Default gateway melalui CHR
-    # (semua traffic keluar harus lewat VPN gateway)
+      - ${CHR_IP:-192.168.100.1}
     command: >
       /bin/bash -c "
         ip route del default 2>/dev/null || true;
-        ip route add default via ${CHR_INTERNAL_IP:-192.168.100.1};
+        ip route add default via ${CHR_IP:-192.168.100.1};
         tail -f /dev/null
       "
     volumes:
@@ -84,26 +83,15 @@ services:
       - chr
 
 # -----------------------------------------------------------
-# Networks
+# Networks - satu network, isolasi via firewall CHR
 # -----------------------------------------------------------
 networks:
-  # Management network - untuk akses Winbox/API ke CHR
-  mgmt:
+  chr-net:
     driver: bridge
     ipam:
       config:
-        - subnet: ${MGMT_SUBNET:-172.20.0.0/24}
-          gateway: ${MGMT_GATEWAY:-172.20.0.1}
-
-  # Internal network - CHR <-> CentOS
-  # Isolasi dilakukan via firewall CHR, bukan internal: true
-  # (internal: true menyebabkan konflik saat CHR attach ke 2 network)
-  internal:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: ${INTERNAL_SUBNET:-192.168.100.0/24}
-          gateway: ${INTERNAL_GATEWAY:-192.168.100.1}
+        - subnet: ${CHR_SUBNET:-192.168.100.0/24}
+          gateway: ${CHR_GATEWAY:-192.168.100.254}
 
 # -----------------------------------------------------------
 # Volumes
