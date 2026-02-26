@@ -18,13 +18,12 @@ RUN sed -i 's/^enabled=1/enabled=0/' \
 # Install EPEL
 RUN yum -y install epel-release
 
-# Fix EPEL repo ke arsip, bersihkan cache
+# Fix EPEL repo ke arsip (baseurl asli pakai http://download.fedoraproject.org)
 RUN find /etc/yum.repos.d/ -name "epel*.repo" -exec sed -i \
         -e 's|^metalink=|#metalink=|g' \
         -e 's|^mirrorlist=|#mirrorlist=|g' \
-        -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        -e 's|^baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        -e 's|^#baseurl=http://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        -e 's|^baseurl=http://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
         {} \; && \
     yum clean all && rm -rf /var/cache/yum
 
