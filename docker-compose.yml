@@ -95,10 +95,11 @@ networks:
         - subnet: ${MGMT_SUBNET:-172.20.0.0/24}
           gateway: ${MGMT_GATEWAY:-172.20.0.1}
 
-  # Internal network - CHR <-> CentOS (terisolasi)
+  # Internal network - CHR <-> CentOS
+  # Isolasi dilakukan via firewall CHR, bukan internal: true
+  # (internal: true menyebabkan konflik saat CHR attach ke 2 network)
   internal:
     driver: bridge
-    internal: true   # Tidak ada akses internet langsung
     ipam:
       config:
         - subnet: ${INTERNAL_SUBNET:-192.168.100.0/24}
