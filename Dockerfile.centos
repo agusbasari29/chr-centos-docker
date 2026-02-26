@@ -15,15 +15,17 @@ RUN sed -i \
     -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
     /etc/yum.repos.d/CentOS-Base.repo
 
-# Update & install essential tools
-RUN yum -y update && \
-    yum -y install epel-release && \
+# Install EPEL, fix mirror sebelum dipakai, lalu install packages
+RUN yum -y install epel-release && \
     sed -i \
+        -e 's|^metalink=|#metalink=|g' \
         -e 's|^mirrorlist=|#mirrorlist=|g' \
-        -e 's|^#baseurl=https\?://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        /etc/yum.repos.d/epel*.repo && \
+        -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        /etc/yum.repos.d/epel.repo \
+        /etc/yum.repos.d/epel-testing.repo 2>/dev/null; \
+    yum -y update && \
     yum -y install \
-        # Networking tools
         iproute \
         net-tools \
         iputils \
@@ -33,7 +35,6 @@ RUN yum -y update && \
         nmap-ncat \
         wget \
         curl \
-        # System tools
         sudo \
         vim \
         nano \
@@ -41,7 +42,6 @@ RUN yum -y update && \
         which \
         lsof \
         htop \
-        # For future services
         supervisor && \
     yum clean all && \
     rm -rf /var/cache/yum
