@@ -62,12 +62,14 @@ services:
       - ./routeros/initial-config.rsc:/routeros/initial-config.rsc:ro
     environment:
       - ROUTEROS_PASSWORD=${CHR_ADMIN_PASSWORD:-changeme123}
+    # Healthcheck diperpanjang karena CHR berjalan di QEMU emulasi (tanpa KVM)
+    # Boot bisa memakan waktu 3-5 menit
     healthcheck:
       test: ["CMD", "ping", "-c1", "-W1", "127.0.0.1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 60s
+      timeout: 30s
+      retries: 10
+      start_period: 300s
 
   # -----------------------------------------------------------
   # CentOS - Backend Services
