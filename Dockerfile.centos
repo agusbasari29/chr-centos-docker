@@ -19,11 +19,13 @@ RUN sed -i 's/^enabled=1/enabled=0/' \
 RUN yum -y install epel-release
 
 # Fix EPEL repo ke arsip (baseurl asli pakai http://download.fedoraproject.org)
+# gpgcheck=0 karena GPG key EPEL 7 sudah expired
 RUN find /etc/yum.repos.d/ -name "epel*.repo" -exec sed -i \
         -e 's|^metalink=|#metalink=|g' \
         -e 's|^mirrorlist=|#mirrorlist=|g' \
         -e 's|^#baseurl=http://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
         -e 's|^baseurl=http://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        -e 's|^gpgcheck=1|gpgcheck=0|g' \
         {} \; && \
     yum clean all && rm -rf /var/cache/yum
 
