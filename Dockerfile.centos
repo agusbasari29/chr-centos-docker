@@ -15,16 +15,27 @@ RUN sed -i \
     -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
     /etc/yum.repos.d/CentOS-Base.repo
 
-# Install EPEL, fix mirror sebelum dipakai, lalu install packages
-RUN yum -y install epel-release && \
+# Install EPEL
+RUN yum -y install epel-release
+
+# Fix EPEL repo - ganti metalink/mirrorlist ke arsip, bersihkan cache lama
+RUN sed -i \
+        -e 's|^metalink=|#metalink=|g' \
+        -e 's|^mirrorlist=|#mirrorlist=|g' \
+        -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
+        /etc/yum.repos.d/epel.repo && \
     sed -i \
         -e 's|^metalink=|#metalink=|g' \
         -e 's|^mirrorlist=|#mirrorlist=|g' \
         -e 's|^#baseurl=https://download.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
         -e 's|^#baseurl=https://download1.fedoraproject.org/pub/epel|baseurl=https://archives.fedoraproject.org/pub/archive/epel|g' \
-        /etc/yum.repos.d/epel.repo \
-        /etc/yum.repos.d/epel-testing.repo 2>/dev/null; \
-    yum -y update && \
+        /etc/yum.repos.d/epel-testing.repo 2>/dev/null || true && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
+# Update & install packages
+RUN yum -y update && \
     yum -y install \
         iproute \
         net-tools \
